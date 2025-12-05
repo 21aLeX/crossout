@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CROSSOUT | CRAFT-RIDE-DESTROY</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #000;
+            font-family: 'Orbitron', 'Arial Black', sans-serif;
+            overflow: hidden;
+        }
+        
+        .container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .parallax-image {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+            cursor: pointer;
+        }
+        
+        .parallax-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        
+        /* 3D эффект при наведении */
+        .parallax-image:hover {
+            transform: perspective(1200px) rotateY(8deg) rotateX(5deg) scale(1.02);
+        }
+        
+        .parallax-image:hover img {
+            filter: brightness(1.1) contrast(1.1);
+        }
+        
+        /* Свечение по краям */
+        .glow-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, transparent 60%, rgba(255, 69, 0, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.8s;
+            pointer-events: none;
+        }
+        
+        .parallax-image:hover .glow-overlay {
+            opacity: 1;
+        }
+        
+        /* Текст игры */
+        .game-title {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(48px, 8vw, 96px);
+            font-weight: 900;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            color: transparent;
+            background: linear-gradient(45deg, #ff8c00, #ff4500, #ff0000);
+            -webkit-background-clip: text;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(255, 69, 0, 0.7);
+            z-index: 3;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .game-subtitle {
+            position: absolute;
+            top: 32%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(18px, 2.5vw, 32px);
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #ffcc00;
+            text-shadow: 0 0 15px rgba(255, 204, 0, 0.8);
+            z-index: 3;
+            text-align: center;
+            width: 100%;
+        }
+        
+        /* Контейнер для кнопок */
+        .buttons-container {
+            position: absolute;
+            top: 65%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: clamp(30px, 6vw, 80px);
+            z-index: 4;
+        }
+        
+        /* Стили кнопок с огненным эффектом */
+        .fire-button {
+            position: relative;
+            padding: clamp(12px, 2vw, 20px) clamp(25px, 4vw, 45px);
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(16px, 2vw, 22px);
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #fff;
+            background: linear-gradient(45deg, #2a1a0a, #1a0a0a);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            box-shadow: 
+                0 0 20px rgba(255, 69, 0, 0.3),
+                0 0 40px rgba(255, 69, 0, 0.2),
+                inset 0 0 15px rgba(255, 69, 0, 0.2);
+            text-shadow: 0 0 10px rgba(255, 69, 0, 0.8);
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        /* Огненный градиент для кнопок */
+        .fire-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, 
+                transparent 10%,
+                rgba(255, 69, 0, 0.1) 30%,
+                rgba(255, 140, 0, 0.2) 50%,
+                rgba(255, 69, 0, 0.1) 70%,
+                transparent 90%);
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        
+        /* Основной огненный эффект при наведении */
+        .fire-button:hover {
+            transform: translateY(-10px) scale(1.1);
+            color: #ffcc00;
+            background: linear-gradient(45deg, #4a2a1a, #2a1a0a);
+            box-shadow: 
+                0 0 40px rgba(255, 69, 0, 0.8),
+                0 0 80px rgba(255, 69, 0, 0.6),
+                0 0 120px rgba(255, 69, 0, 0.4),
+                inset 0 0 20px rgba(255, 69, 0, 0.4);
+            animation: fire-flicker 0.3s infinite alternate;
+        }
+        
+        .fire-button:hover::before {
+            opacity: 1;
+            animation: fire-move 1s infinite linear;
+        }
+        
+        /* Анимация мерцания огня */
+        @keyframes fire-flicker {
+            0%, 100% {
+                box-shadow: 
+                    0 0 40px rgba(255, 69, 0, 0.8),
+                    0 0 80px rgba(255, 69, 0, 0.6),
+                    0 0 120px rgba(255, 69, 0, 0.4),
+                    inset 0 0 20px rgba(255, 69, 0, 0.4);
+            }
+            50% {
+                box-shadow: 
+                    0 0 50px rgba(255, 140, 0, 0.9),
+                    0 0 90px rgba(255, 140, 0, 0.7),
+                    0 0 130px rgba(255, 140, 0, 0.5),
+                    inset 0 0 25px rgba(255, 140, 0, 0.5);
+            }
+        }
+        
+        /* Анимация движения огня */
+        @keyframes fire-move {
+            0% {
+                background-position: -100% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+        
+        /* Искры и частицы огня (убраны, оставлен только фон) */
+        .fire-button::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: radial-gradient(circle at 30% 20%, 
+                rgba(255, 69, 0, 0.3) 0%,
+                transparent 50%),
+                radial-gradient(circle at 70% 80%, 
+                rgba(255, 140, 0, 0.3) 0%,
+                transparent 50%);
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.4s;
+            border-radius: 15px;
+            filter: blur(10px);
+        }
+        
+        .fire-button:hover::after {
+            opacity: 1;
+        }
+        
+        /* Контур огня */
+        .fire-button span {
+            position: relative;
+            z-index: 2;
+            display: block;
+            transition: transform 0.3s;
+        }
+        
+        .fire-button:hover span {
+            animation: text-glow 0.5s infinite alternate;
+        }
+        
+        @keyframes text-glow {
+            0% {
+                text-shadow: 0 0 10px rgba(255, 69, 0, 0.8);
+            }
+            100% {
+                text-shadow: 
+                    0 0 15px rgba(255, 140, 0, 1),
+                    0 0 20px rgba(255, 69, 0, 0.9),
+                    0 0 25px rgba(255, 0, 0, 0.8);
+            }
+        }
+        
+        /* Раздельные цвета для кнопок */
+        .telegram-btn {
+            border: 2px solid rgba(0, 136, 204, 0.3);
+        }
+        
+        .telegram-btn:hover {
+            border-color: rgba(0, 136, 204, 0.8);
+            box-shadow: 
+                0 0 40px rgba(0, 136, 204, 0.8),
+                0 0 80px rgba(0, 136, 204, 0.6),
+                0 0 120px rgba(0, 136, 204, 0.4),
+                inset 0 0 20px rgba(0, 136, 204, 0.4);
+        }
+        
+        .discord-btn {
+            border: 2px solid rgba(114, 137, 218, 0.3);
+        }
+        
+        .discord-btn:hover {
+            border-color: rgba(114, 137, 218, 0.8);
+            box-shadow: 
+                0 0 40px rgba(114, 137, 218, 0.8),
+                0 0 80px rgba(114, 137, 218, 0.6),
+                0 0 120px rgba(114, 137, 218, 0.4),
+                inset 0 0 20px rgba(114, 137, 218, 0.4);
+        }
+        
+        /* Дым для эффекта реализма */
+        .smoke-effect {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            width: 100%;
+            height: 20px;
+            background: radial-gradient(ellipse at center, 
+                rgba(255, 255, 255, 0.1) 0%,
+                transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s;
+            filter: blur(5px);
+            z-index: -2;
+        }
+        
+        .fire-button:hover .smoke-effect {
+            opacity: 0.5;
+            animation: smoke-rise 1s infinite;
+        }
+        
+        @keyframes smoke-rise {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0.5;
+            }
+            100% {
+                transform: translateY(-30px) scale(1.2);
+                opacity: 0;
+            }
+        }
+        
+        /* Эффект нажатия кнопки */
+        .fire-button:active {
+            transform: translateY(-5px) scale(0.95);
+        }
+    </style>
+    
+    <!-- Шрифт Orbitron для стильного текста -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="parallax-image">
+            <!-- ЗАМЕНИТЕ src НА ПУТЬ К ВАШЕМУ ИЗОБРАЖЕНИЮ -->
+            <img src="Aug1920x1080.jpg" alt="CROSSOUT - CRAFT-RIDE-DESTROY">
+            <div class="glow-overlay"></div>
+            
+            <div class="game-title">CROSSOUT</div>
+            <div class="game-subtitle">CRAFT • RIDE • DESTROY</div>
+            
+            <!-- Кнопки с эффектом огня -->
+            <div class="buttons-container">
+                <a href="https://t.me/your-telegram-link" target="_blank" class="fire-button telegram-btn">
+                    <span>Telegram</span>
+                    <div class="smoke-effect"></div>
+                </a>
+                
+                <a href="https://discord.gg/6KGZqkxC" target="_blank" class="fire-button discord-btn">
+                    <span>Discord</span>
+                    <div class="smoke-effect"></div>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Параллакс-эффект при движении мыши
+        const parallax = document.querySelector('.parallax-image');
+        
+        parallax.addEventListener('mousemove', (e) => {
+            const { width, height } = parallax.getBoundingClientRect();
+            const x = (e.clientX - width / 2) / width;
+            const y = (e.clientY - height / 2) / height;
+            
+            const rotateY = x * 10; // угол поворота по Y
+            const rotateX = -y * 8; // угол поворота по X
+            
+            parallax.style.transform = `
+                perspective(1200px) 
+                rotateY(${rotateY}deg) 
+                rotateX(${rotateX}deg) 
+                scale(1.02)
+            `;
+            
+            // Эффект движения фона
+            const img = parallax.querySelector('img');
+            const moveX = x * 30;
+            const moveY = y * 30;
+            img.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.05)`;
+        });
+        
+        parallax.addEventListener('mouseleave', () => {
+            parallax.style.transform = 'perspective(1200px) rotateY(0) rotateX(0) scale(1)';
+            parallax.querySelector('img').style.transform = 'translate(0, 0) scale(1)';
+        });
+        
+        // Эффект нажатия кнопки
+        const buttons = document.querySelectorAll('.fire-button');
+        
+        buttons.forEach(button => {
+            button.addEventListener('mousedown', () => {
+                button.style.transform = 'translateY(-5px) scale(0.95)';
+            });
+            
+            button.addEventListener('mouseup', () => {
+                button.style.transform = 'translateY(-10px) scale(1.1)';
+            });
+            
+            button.addEventListener('mouseleave', () => {
+                button.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>
